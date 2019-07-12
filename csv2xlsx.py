@@ -6,9 +6,11 @@ import pandas as pd
 import csv
 from datetime import datetime
 import re
-
-DATECOL_REGEX = re.compile(r"date", re.IGNORECASE)
+import io
+DATECOL_REGEX = re.compile(r"date|time", re.IGNORECASE)
 DATE_STRING = r"%m/%d/%Y %H:%M:%S %p"
+
+ILLEGAL_CHARACTERS_RE=re.compile('[\\000-\\010]|[\\013-\\014]|[\\016-\\037]')
 
 LOGGER = logging.getLogger("csv2xlsx")
 LOGGER.setLevel(logging.INFO)
@@ -44,8 +46,8 @@ def main():
                         nargs=1)
 
     parser.add_argument(
-        "--date-fields",
         "-f",
+        "--date-fields",
         nargs="*",
         dest="datecols",
         help="list of date fields")
@@ -71,7 +73,14 @@ def main():
     if args.debug:
         LOGGER.setLevel(logging.DEBUG)
 
-    df = pd.read_csv(args.infile[0])
+    buf=None
+    with open(args.infile[0],"rb") as f:
+        blob=f.read().decode("utf8","ignore")
+        fixed_blob=re.sub(ILLEGAL_CHARACTERS_RE,"",blob)
+        buf=io.StringIO(fixed_blob)
+        
+    df = pd.read_csv(buf,#args.infile[0],
+    encoding="utf8")
     r, c = df.shape
     LOGGER.debug(f"Succesfully read {r} rows from {args.infile[0]}")
 
@@ -88,6 +97,9 @@ def main():
     for c in datecols:
         LOGGER.debug(f"Processing column {c}")
         df[c] = df[c].apply(lambda s: parsedate(s, args.datefmt))
+
+
+    #df.applymap(fix_bad_characters)
     with pd.ExcelWriter(args.outfile[0]) as excel:
         df.to_excel(excel, index=False)
 
