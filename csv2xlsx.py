@@ -53,7 +53,7 @@ def main():
     parser.add_argument(
         "--date-string",
         default=DATE_STRING,
-        help=f"format string, default: {DATE_STRING}",
+        help="format string, default: %(default)s",
         dest="datefmt")
 
     parser.add_argument(
