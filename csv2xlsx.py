@@ -97,7 +97,13 @@ def main():
 
     for c in datecols:
         LOGGER.debug(f"Processing column {c}")
-        df[c] = df[c].apply(lambda s: parsedate(s, args.datefmt))
+        def _parsedate(s):
+            d=parsedate(s, args.datefmt)
+            if d is not None:
+                # Excel does not understand timezone aware formats
+                return d.replace(tzinfo=None)
+            return d
+        df[c] = df[c].apply(_parsedate)
 
     with pd.ExcelWriter(args.outfile[0]) as excel:
         df.to_excel(excel, index=False)
